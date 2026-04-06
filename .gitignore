@@ -1,0 +1,84 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+.env/
+.conda/
+
+# Testing / typecheck / linters
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Environment & secrets (never commit API keys)
+.env
+.env.*
+!.env.example
+*.pem
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# --- Editors / IDEs ---
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# --- Project: generated figures (regenerate from scripts) ---
+Claude Visualizations/output/
+
+# --- Logs & temp ---
+*.log
+tmp/
+temp/
+*.tmp
+
+# --- Optional: uncomment if you store large local artifacts inside the repo ---
+# *.csv
+# *.npy
+# *.npz
+# data/
+# results/
