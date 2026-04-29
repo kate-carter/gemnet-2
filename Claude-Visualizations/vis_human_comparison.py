@@ -59,10 +59,15 @@ def _compute_human_stats(concept):
 
 def plot_human_comparison():
     # Load 256-d results
-    results_path = RESULTS_DIR / "256_mahalanobis_results_master.xlsx"
-    if not results_path.exists():
+    candidates = sorted(RESULTS_DIR.glob("*_256_results_master.xlsx"))
+    if not candidates:
+        candidates = sorted(RESULTS_DIR.glob("*_256_master_results.xlsx"))
+    if not candidates:
+        candidates = sorted(RESULTS_DIR.glob("256_master_results.xlsx"))
+    if not candidates:
         print("No 256-d results found – skipping human comparison.")
         return
+    results_path = candidates[0]
 
     xls = pd.ExcelFile(results_path, engine="openpyxl")
     sheets = {s: xls.parse(s) for s in xls.sheet_names}
@@ -247,9 +252,14 @@ def plot_human_comparison():
 
 def plot_metric_profiles():
     """Per-metric comparison: human value vs LLM value across thresholds."""
-    results_path = RESULTS_DIR / "256_mahalanobis_results_master.xlsx"
-    if not results_path.exists():
+    candidates = sorted(RESULTS_DIR.glob("*_256_results_master.xlsx"))
+    if not candidates:
+        candidates = sorted(RESULTS_DIR.glob("*_256_master_results.xlsx"))
+    if not candidates:
+        candidates = sorted(RESULTS_DIR.glob("256_master_results.xlsx"))
+    if not candidates:
         return
+    results_path = candidates[0]
 
     xls = pd.ExcelFile(results_path, engine="openpyxl")
     sheets = {s: xls.parse(s) for s in xls.sheet_names}

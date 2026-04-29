@@ -122,8 +122,8 @@ def process_network(args):
         matrix = pd.read_csv(filepath, header=None).values
 
         # Check if matrix is too sparse (all or nearly all zeros)
-        if np.count_nonzero(matrix) < (0.02 * matrix.size):
-            logging.warning(f"Skipping {concept_name} at threshold {threshold:.2f}: matrix is more than 98% zeros")
+        if np.count_nonzero(matrix) < (0.01 * matrix.size):
+            logging.warning(f"Skipping {concept_name} at threshold {threshold:.2f}: matrix is more than 99% zeros")
             return None
 
         # Run 50 iterations and collect results
@@ -206,7 +206,7 @@ if __name__ == "__main__":
         for r in results:
             key = (r['concept'], r['threshold'])
             grouped.setdefault(key, []).append(r)
-        logging.info(f"  ✓ Completed {len(results)}/{len(jobs)} networks")
+        logging.info(f"  ✓ Completed {len(results)}/{len(jobs)} chunk-jobs")
 
         # Store all individual results
         merged_results = []
@@ -261,9 +261,9 @@ if __name__ == "__main__":
             f"Threshold {THRESHOLD:.2f} completed in {threshold_time:.2f} min ({threshold_time / 60:.2f} hours) - {len(results)}/{len(concept_names)} networks"
             f"current time: datetime.now()")
 
-    # Save summary results (means only, no iteration details)
+    # Save summary results (means only, no iteration details) across ALL thresholds
     summary_results = []
-    for r in merged_results:
+    for r in all_results:
         summary_results.append({
             'concept': str(r['concept']),
             'threshold': float(r['threshold']),
@@ -278,7 +278,7 @@ if __name__ == "__main__":
 
     # Save first 2 iterations per concept-threshold (per-node diversity values)
     first_iterations_data = []
-    for r in merged_results:
+    for r in all_results:
         concept = r['concept']
         threshold = r['threshold']
 
@@ -311,31 +311,31 @@ if __name__ == "__main__":
                     'diversity': float(diversity_array[node_idx])
                 })
 
-        first_iterations_df = pd.DataFrame(first_iterations_data)
-        first_iterations_path = f'{output_dir}1536_nondet_first2iterations1.csv'
-        first_iterations_df.to_csv(first_iterations_path, index=False)
-        logging.info(f"Saved first 2 iterations (per-node) to: {first_iterations_path}")
+    first_iterations_df = pd.DataFrame(first_iterations_data)
+    first_iterations_path = f'{output_dir}1536_nondet_first2iterations1.csv'
+    first_iterations_df.to_csv(first_iterations_path, index=False)
+    logging.info(f"Saved first 2 iterations (per-node) to: {first_iterations_path}")
 
-        # Save all 100 modularity values per concept-threshold
-        all_modularity_data = []
-        for r in merged_results:
-            concept = r['concept']
-            threshold = r['threshold']
-            modularity_values = r['all_modularity_values']
+    # Save all 100 modularity values per concept-threshold
+    all_modularity_data = []
+    for r in all_results:
+        concept = r['concept']
+        threshold = r['threshold']
+        modularity_values = r['all_modularity_values']
 
-            # One row per iteration
-            for iteration_idx, Q in enumerate(modularity_values, start=1):
-                all_modularity_data.append({
-                    'concept': str(concept),
-                    'threshold': float(threshold),
-                    'iteration': int(iteration_idx),
-                    'modularity': float(Q)
-                })
+        # One row per iteration
+        for iteration_idx, Q in enumerate(modularity_values, start=1):
+            all_modularity_data.append({
+                'concept': str(concept),
+                'threshold': float(threshold),
+                'iteration': int(iteration_idx),
+                'modularity': float(Q)
+            })
 
-        modularity_df = pd.DataFrame(all_modularity_data)
-        modularity_path = f'{output_dir}1536_nondet_all_modularity1.csv'
-        modularity_df.to_csv(modularity_path, index=False)
-        logging.info(f"Saved all 100 modularity values per concept-threshold to: {modularity_path}")
+    modularity_df = pd.DataFrame(all_modularity_data)
+    modularity_path = f'{output_dir}1536_nondet_all_modularity1.csv'
+    modularity_df.to_csv(modularity_path, index=False)
+    logging.info(f"Saved all 100 modularity values per concept-threshold to: {modularity_path}")
 
     # Save threshold-averaged results
     summary_df = pd.DataFrame(threshold_summaries)
@@ -348,7 +348,7 @@ if __name__ == "__main__":
     logging.info("\n" + "=" * 60)
     logging.info("All processing completed!")
     logging.info(f"Total time: {total_time / 60:.2f} minutes")
-    logging.info(f"Processed: {len(merged_results)*len(concept_names)} total network-threshold combinations")
+    logging.info(f"Processed: {len(all_results)} total concept-threshold combinations")
     logging.info(f"Output directory: {output_dir}")
     logging.info("Process completed at datetime.now()")
     logging.info("=" * 60)

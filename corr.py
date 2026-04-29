@@ -34,7 +34,7 @@ concept_name = [
 
 # Base paths
 input_dir = '/Users/Kate/Documents/Binghamton-SPiNS/word-embedding-project/gemnet-2/gemini-2/embeddings-2/'
-output_dir = '/Users/Kate/Documents/Binghamton-SPiNS/word-embedding-project/gemnet-2/gemini-2/mahalanobis/mg_corr/'
+output_dir = '/Users/Kate/Documents/Binghamton-SPiNS/word-embedding-project/gemnet-2/gemini-2/pearson/p_corr/'
 
 
 start_time = time.time()
@@ -112,6 +112,7 @@ for concept in concept_name:
             off_diag = matrix_corr[iu]
             min_val = np.min(off_diag)
             max_val = np.max(off_diag)
+            print(f'min/max before normalization: {min_val}, {max_val}')
 
             # Normalize to [-1, 1] (full matrix; diagonal set after)
             if method == 'mahalanobis':
@@ -119,15 +120,23 @@ for concept in concept_name:
                     matrix_corr = 2 * ((matrix_corr - min_val) / (max_val - min_val)) - 1
                 else:
                     matrix_corr = np.zeros_like(matrix_corr, dtype=float)
-                print(f'after norm min/max: {matrix_corr.min()}, {matrix_corr.max()}'
-                                )
+                iu = np.triu_indices_from(matrix_corr, k=1)
+                off_diag2 = matrix_corr[iu]
+                min_val2 = np.min(off_diag2)
+                max_val2 = np.max(off_diag2)
+                print(f'min/max after normalization: {min_val2}, {max_val2}')
             else:
                 # norm to [-1, 1]
                 if max_val > min_val:
                     matrix_corr = 2 * ((matrix_corr - min_val) / (max_val - min_val)) - 1
                 else:
                     matrix_corr = np.zeros_like(matrix_corr, dtype=float)
-                print("after normalization min/max:", matrix_corr.min(), matrix_corr.max())
+                iu = np.triu_indices_from(matrix_corr, k=1)
+                off_diag2 = matrix_corr[iu]
+                min_val2 = np.min(off_diag2)
+                max_val2 = np.max(off_diag2)
+                print(f'min/max after normalization: {min_val2}, {max_val2}'
+                                )
 
             # Convert diagonal from 1's to 0's
             matrix_corr = matrix_corr.copy()

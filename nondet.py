@@ -118,8 +118,8 @@ def process_network(args):
         matrix = pd.read_csv(filepath, header=None).values
 
         # Check if matrix is too sparse (all or nearly all zeros)
-        if np.count_nonzero(matrix) < (0.02 * matrix.size):
-            logging.warning(f"Skipping {concept_name} at threshold {threshold:.2f}: matrix is more than 98% zeros")
+        if np.count_nonzero(matrix) < (0.01 * matrix.size):
+            logging.warning(f"Skipping {concept_name} at threshold {threshold:.2f}: matrix is more than 99% zeros")
             return None
 
         # Run 100 iterations and collect results

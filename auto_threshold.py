@@ -19,7 +19,7 @@ from multiprocessing import Pool
 
 # Setup logging (multiprocessing-safe)
 logging.basicConfig(
-    filename='net_threshold_g2_spearman.log',
+    filename='net_threshold_g2_pearson.log',
     level=logging.INFO,
     format='%(asctime)s - %(processName)s - %(message)s'
 )
@@ -66,7 +66,7 @@ def process_matrix_threshold(args):
     current_concept, dim, threshold, input_dir, output_dir = args
 
     #construct filenames/list for logging
-    input_filename = f"{current_concept}_{dim}_spearman.csv"
+    input_filename = f"{current_concept}_{dim}_pearson.csv"
     output_filename = f"{current_concept}_{dim}_{threshold:.2f}.csv"    
     
     try:
@@ -175,13 +175,13 @@ if __name__ == "__main__":
         
         # Save individual dimension results
         all_results_df = pd.DataFrame(all_results)
-        all_results_path = os.path.join(f'{stats_dir}{dim}_threshold_ind_spearman.csv')
+        all_results_path = os.path.join(f'{stats_dir}{dim}_threshold_ind_pearson.csv')
         all_results_df.to_csv(all_results_path, index=False)
         logging.info(f"\nSaved all individual results to: {all_results_path}")
         
         # Save threshold-averaged results
         summary_df = pd.DataFrame(threshold_summaries)
-        summary_path = os.path.join(f'{stats_dir}{dim}_threshold_summary_spearman.csv')
+        summary_path = os.path.join(f'{stats_dir}{dim}_threshold_summary_pearson.csv')
         summary_df.to_csv(summary_path, index=False)
         logging.info(f"Saved threshold summary to: {summary_path}")
     # Final summary

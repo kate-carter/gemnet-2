@@ -6,7 +6,7 @@ computed across the 15 concepts at every threshold.
 
 Layout
 ------
-  Rows : BCT metric  (modularity | corefit)
+  Rows : BCT metric  (modularity | corefit | diversity | clustering | strength | degree)
   Cols : dimensionality (256 | 512 | 768 | 1536 | 3072)
 
 Each subplot shows one line per correlation method (Mahalanobis, Spearman,
@@ -39,7 +39,7 @@ from vis_config import (
 VIS_RESULTS_DIR = BASE / "gemnet-2/gemini-2/vis_results"
 VIS_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-METRICS = ["modularity", "corefit"]
+METRICS = ["modularity", "corefit", "diversity", "clustering", "strength", "degree"]
 
 
 # ── Data loading ─────────────────────────────────────────────────────────────
@@ -176,13 +176,13 @@ def plot_semd_correlation() -> None:
 
     fig, axes = plt.subplots(
         n_metrics, n_dims,
-        figsize=(4.0 * n_dims, 3.6 * n_metrics),
+        figsize=(4.0 * n_dims, 3.2 * n_metrics),
         sharey="row",
         constrained_layout=True,
     )
     fig.suptitle(
         "Spearman ρ (BCT metric vs. SemD) across 15 concepts",
-        fontsize=13, fontweight="bold",
+        fontsize=14, fontweight="bold",
     )
 
     x = THRESHOLDS

@@ -13,5 +13,9 @@ source /home/kxc750/bct_stats/bct_venv/bin/activate
 which python
 python -c "import scipy; print(scipy.__version__)"
 python nondet1536.py
-cp -r $PFSDIR  /home/kxc750/gemnet-2/s_results
+cp -r 1536_nondet_all_modularity1.csv /home/kxc750/gemnet-2/p_results
+cp -r 1536_nondet_results.csv /home/kxc750/gemnet-2/p_results
+cp -r 1536_nondet.log /home/kxc750/gemnet-2/p_results
+cp -r 1536_nondet_first2iterations1.csv /home/kxc750/gemnet-2/p_results
+cp -r 1536_nondet_results1.csv /home/kxc750/gemnet-2/p_results
 rm -rf "$PFSDIR"/*

@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
+import re
 from scipy import stats as sp_stats
 from vis_config import (
     apply_style, savefig, CONCEPTS, CONCEPT_COLORS, DIM_COLORS,
@@ -55,10 +56,20 @@ def _pick_sheet(sheets, primary, fallback):
 
 def load_all_dims():
     """Return {dim: {sheet_name: DataFrame}} for every available results file."""
-    import glob
     results = {}
-    for p in sorted(RESULTS_DIR.glob("*_mahalanobis_results_master.xlsx")):
-        dim = int(p.stem.split("_")[0])
+    for p in sorted(RESULTS_DIR.glob("*.xlsx")):
+        # Support both naming conventions:
+        #   {run}_{dim}_results_master.xlsx
+        #   {run}_{dim}_master_results.xlsx
+        #   {dim}_master_results.xlsx
+        m = re.search(r"_(\d+)_results_master$", p.stem)
+        if not m:
+            m = re.search(r"_(\d+)_master_results$", p.stem)
+        if not m:
+            m = re.search(r"^(\d+)_master_results$", p.stem)
+        if not m:
+            continue
+        dim = int(m.group(1))
         xls = pd.ExcelFile(p, engine="openpyxl")
         results[dim] = {s: xls.parse(s) for s in xls.sheet_names}
     return results

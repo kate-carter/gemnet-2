@@ -6,7 +6,7 @@ computed across the 15 concepts at every threshold.
 
 Layout
 ------
-  Rows : BCT metric  (modularity | corefit)
+  Rows : BCT metric  (modularity | corefit | diversity | clustering | strength | degree)
   Cols : dimensionality (256 | 512 | 768 | 1536 | 3072)
 
 Each subplot shows one line per correlation method (Mahalanobis, Spearman,
@@ -43,9 +43,13 @@ VIS_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 HUMAN_ROW: dict[str, str] = {
     "modularity": "hum_modularity",
     "corefit":    "hum_corefit",
+    "diversity":  "hum_diversity",
+    "clustering": "hum_clustering",
+    "strength":   "hum_strength",
+    "degree":     "hum_degree",
 }
 
-METRICS = list(HUMAN_ROW.keys())   # ["modularity", "corefit"]
+METRICS = list(HUMAN_ROW.keys())
 
 # ── Data loading ─────────────────────────────────────────────────────────────
 
@@ -177,13 +181,13 @@ def plot_human_correlation() -> None:
 
     fig, axes = plt.subplots(
         n_metrics, n_dims,
-        figsize=(4.0 * n_dims, 3.6 * n_metrics),
+        figsize=(4.0 * n_dims, 3.2 * n_metrics),
         sharey="row",
         constrained_layout=True,
     )
     fig.suptitle(
         "Spearman ρ (LLM metric vs. Human metric) across 15 concepts",
-        fontsize=13, fontweight="bold",
+        fontsize=14, fontweight="bold",
     )
 
     x = THRESHOLDS

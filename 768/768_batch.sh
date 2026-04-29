@@ -15,6 +15,14 @@ which python
 python -c "import scipy; print(scipy.__version__)"
 python nondet768.py
 python det768.py
-cp -r $PFSDIR  /home/kxc750/gemnet-2/s_results
+cp -r 768_det_avgs.csv  /home/kxc750/gemnet-2/p_results
+cp -r 768_det_individual_nodes.csv  /home/kxc750/gemnet-2/p_results
+cp -r 768_det.log /home/kxc750/gemnet-2/p_results
+cp -r 768_det_results.csv /home/kxc750/gemnet-2/p_results
+cp -r 768_nondet_all_modularity1.csv /home/kxc750/gemnet-2/p_results
+cp -r 768_nondet_results.csv /home/kxc750/gemnet-2/p_results
+cp -r 768_nondet.log /home/kxc750/gemnet-2/p_results
+cp -r 768_nondet_first2iterations1.csv /home/kxc750/gemnet-2/p_results
+cp -r 768_nondet_results1.csv /home/kxc750/gemnet-2/p_results
 rm -rf "$PFSDIR"/*
  

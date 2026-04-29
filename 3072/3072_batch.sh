@@ -13,5 +13,8 @@ source /home/kxc750/bct_stats/bct_venv/bin/activate
 which python
 python -c "import scipy; print(scipy.__version__)"
 python nondet3072.py 
-cp -r $PFSDIR  /home/kxc750/gemnet-2/m_results 
+cp -r 3072_det_avgs.csv  /home/kxc750/gemnet-2/p_results
+cp -r 3072_det_individual_nodes.csv  /home/kxc750/gemnet-2/p_results
+cp -r 3072_det.log /home/kxc750/gemnet-2/p_results
+cp -r 3072_det_results.csv /home/kxc750/gemnet-2/p_results
 rm -rf "$PFSDIR"/*
