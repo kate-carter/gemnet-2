@@ -16,10 +16,11 @@ import pandas as pd
 import logging
 import time
 from multiprocessing import Pool
+from collections import Counter
 
 # Setup logging (multiprocessing-safe)
 logging.basicConfig(
-    filename='ret_threshold_spearman.log',
+    filename='ret_threshold_mahalanobis.log',
     level=logging.INFO,
     format='%(asctime)s - %(processName)s - %(message)s'
 )
@@ -55,20 +56,20 @@ concept_name = [
     "wood",
 ]
 
-# Generate retention threshold values from 10% to 90% in steps of 10%
-retention_values = np.arange(10, 90, 10)
-retention_threshold = [f"{value:.2f}" for value in retention_values]
+# Generate retention targets in steps of 5%
+retention_values = np.arange(95, 0, -5)
+retention_targets = [value for value in retention_values]
 
 #define target dimensionalities
 target_dimensionalities = (3072, 1536, 768, 512, 256)
 
 def process_matrix_threshold(args):
 
-    current_concept, dim, input_dir, output_dir, retention_threshold = args
+    current_concept, dim, input_dir, output_dir, retention_target = args
 
     #construct filenames/list for logging
-    input_filename = f"{current_concept}_{dim}_spearman.csv"
-    output_filename = f"{current_concept}_{dim}_{retention_threshold}.csv"    
+    input_filename = f"{current_concept}_{dim}_mahalanobis.csv"
+    output_filename = f"{current_concept}_{dim}_0.{retention_target}.csv"    
     
     try:
         # Load matrix
@@ -82,70 +83,93 @@ def process_matrix_threshold(args):
         nonzero_before = np.count_nonzero(matrix)
 
         #remove negative values
-        matrix = np.where(matrix <0, 0, matrix)
+        noneg_matrix = np.where(matrix <0, 0, matrix)
 
         # count values after removing negative values
-        nonzero_after_neg = np.count_nonzero(matrix)
+        nonzero_after_neg = np.count_nonzero(noneg_matrix)
         values_neg = nonzero_before - nonzero_after_neg
         percent_neg = (values_neg / total_values) * 100
+        
+        #calculate retention target and required kept count
+        keep_fraction = retention_target / 100
+        required_kept_count = int(np.ceil(keep_fraction * total_values))
 
-        #calculate retention threshold
-        used_threshold = np.percentile(matrix, retention_threshold)
-        
-        # Apply threshold: set values where |value| < threshold to 0
-        matrix_thresholded = np.where(matrix < used_threshold, 0, matrix)
-        
-        # Count values after thresholding
-        nonzero_after = np.count_nonzero(matrix_thresholded)
-        values_zeroed = nonzero_before - nonzero_after
-        percent_zeroed = (values_zeroed / total_values) * 100
-        
-        # Save thresholded matrix
-        output_path = os.path.join(output_dir, output_filename)
-        pd.DataFrame(matrix_thresholded).to_csv(output_path, header=False, index=False)
-        
-        return {
-            'concept': current_concept,
-            'dim': dim,
-            'percent_neg': percent_neg,
-            'percent_zeroed': percent_zeroed,
-            'target retention': retention_threshold,
-            'retention': 100 - percent_zeroed,
-            'used threshold': used_threshold
-        }
+        #calculate drop percentile
+        drop_percentile_q = 100 - retention_target
+
+        if nonzero_after_neg >= required_kept_count:
+            #calculate retention threshold
+            used_threshold = np.percentile(noneg_matrix.flatten(), drop_percentile_q)
+            
+            # Apply threshold: set values where |value| < threshold to 0
+            matrix_thresholded = np.where(noneg_matrix < used_threshold, 0, noneg_matrix)
+            
+            # Count values after thresholding
+            nonzero_after = np.count_nonzero(matrix_thresholded)
+            values_zeroed = nonzero_before - nonzero_after
+            percent_zeroed = (values_zeroed / total_values) * 100
+            
+            # Save thresholded matrix
+            output_path = os.path.join(output_dir, output_filename)
+            pd.DataFrame(matrix_thresholded).to_csv(output_path, header=False, index=False)
+
+            return {
+                'skipped': False,
+                'skipped reason': None,
+                'concept': current_concept,
+                'dim': dim,
+                'percent_neg': percent_neg,
+                'percent_zeroed': percent_zeroed,
+                'target retention': retention_target,
+                'retention': 100 - percent_zeroed,
+                'used threshold': used_threshold
+            }
+        else: 
+            print(f"  Matrix {input_filename} has less than {retention_target} non-zero values after removing negative values")
+            return {
+                'skipped': True,
+                'skipped reason': "insufficient values",
+                'concept': current_concept,
+                'dim': dim,
+                'percent_neg': percent_neg,
+                'target retention': retention_target,
+                'used threshold': None,
+            }
         
     except Exception as e:
-        logging.error(f"Error processing {input_filename} at threshold {retention_threshold}: {e}")
+        logging.error(f"Error processing {input_filename} at threshold {retention_target}: {e}")
         return None
 
 if __name__ == "__main__":
     logging.info("=" * 60)
     logging.info("Starting PARALLEL Network Thresholding")
-    logging.info(f"Retention Thresholds: {len(retention_threshold)}")
-    logging.info(f"Total combinations: {len(concept_name) * len(retention_threshold) * len(target_dimensionalities)}")
+    logging.info(f"Retention Thresholds: {len(retention_targets)}")
+    logging.info(f"Total combinations: {len(concept_name) * len(retention_targets) * len(target_dimensionalities)}")
     logging.info(f"Parallel processes: {num_processes}")
     logging.info(f"Threads per process: {threads_per_process}")
     logging.info("=" * 60)
     
     overall_start = time.time()
+    total_dim_processed = []
 
     # OUTER LOOP: Process each target dimensionality
     for dim in target_dimensionalities:
-
-        all_results = []
         threshold_summaries = []
-        used_thresholds = []
+
+        # Store all individual results
+        individual_results = []
 
         # INNER LOOP: Process each threshold value
-        for retention_threshold_idx, retention_threshold in enumerate(retention_threshold, 1):
+        for retention_target_idx, retention_target in enumerate(retention_targets, 1):
+
             logging.info(f"\n{'=' * 60}")
-            logging.info(f"RETENTION THRESHOLD {retention_threshold}")
+            logging.info(f"RETENTION THRESHOLD {retention_target}")
             logging.info(f"{'=' * 60}")
             
             start_time = time.time()
-            
+
             # Create list of jobs for this threshold (all matrices)
-            jobs = [(current_concept, dim, input_dir, output_dir, retention_threshold) for current_concept in concept_name]
+            jobs = [(current_concept, dim, input_dir, output_dir, retention_target) for current_concept in concept_name]
             
             # Process all matrices for this threshold in parallel
             logging.info(f"Processing {len(jobs)} matrices in parallel...")
@@ -154,52 +178,78 @@ if __name__ == "__main__":
             
             # Filter out None results (failed matrices)
             results = [r for r in results if r is not None]
-            
-            # Store all individual results
-            all_results.extend(results)
-
-            #store used threshold values
-            used_threshold = np.mean([r['used threshold'] for r in results])
+            individual_results.extend(results)
 
             # Calculate average statistics for this threshold
-            if results:
-                percent_neg = np.mean([r['percent_neg'] for r in results])
-                avg_percent_zeroed = np.mean([r['percent_zeroed'] for r in results])
+            if results and not all(r['skipped'] for r in results):
+                processed_rows = [r for r in results if not r['skipped']]
+                percent_neg = np.mean([r['percent_neg'] for r in processed_rows])
+                avg_percent_zeroed = np.mean([r['percent_zeroed'] for r in processed_rows])
                 avg_retention = 100 - avg_percent_zeroed
                 
+                #skipped rows
+                skipped_rows = [r for r in results if r['skipped']]
+                percent_skipped = (len(skipped_rows) / len(results)) * 100                
+                used_threshold = float(np.mean([r['used threshold'] for r in processed_rows]))
+            
                 threshold_summaries.append({
-                    'retention_threshold': retention_threshold,
+                    'retention_threshold': retention_target,
                     'avg_percent_neg': percent_neg,
                     'avg_percent_zeroed': avg_percent_zeroed,
                     'avg_retention': avg_retention,
-                    'n_matrices': len(results),
+                    'n_processed': len(processed_rows),
+                    'n_skipped': len(skipped_rows),
+                    'percent_skipped': percent_skipped,
                     'used threshold': used_threshold
                 })
-                
-                logging.info(f"Threshold {retention_threshold} Summary:")
-                logging.info(f"  Numerical Threshold: {used_threshold:.2f}")
-                logging.info(f"  Avg Retention: {avg_retention:.2f}%")
-            
+                logging.info(f"Threshold {retention_target} Summary:")
+                logging.info(f"Numerical Threshold: {used_threshold:.2f}")
+                logging.info(f"Avg Retention: {avg_retention:.2f}%")
+                if skipped_rows:
+                    reason_counts = Counter(
+                        r.get('skipped reason', 'unknown') for r in skipped_rows
+                    )
+                    logging.info(f"Skipped: {len(skipped_rows)} ({percent_skipped:.2f}%)")
+                    logging.info(f"Skip reasons: {dict(reason_counts)}")
+            else:
+                skipped_rows = [r for r in results if r['skipped']]
+                reason_counts = Counter(
+                    r.get('skipped reason', 'unknown') for r in skipped_rows
+                )
+                logging.info(f"Threshold {retention_target} Summary:")
+                logging.info(f"No matrices processed")
+                logging.info(f"Skipped: {len(skipped_rows)}")
+                logging.info(f"Skip reasons: {dict(reason_counts)}")
+
+
             threshold_time = time.time() - start_time
-            logging.info(f"Threshold {retention_threshold:.2f} completed in {threshold_time:.2f}s ({len(results)}/{len(concept_name)} matrices)")
+            logging.info(f"Threshold {retention_target} completed in {threshold_time:.2f}s ({len(results)}/{len(concept_name)} matrices)")
         
         # Save individual dimension results
-        all_results_df = pd.DataFrame(all_results)
-        all_results_path = os.path.join(f'{stats_dir}{dim}_threshold_ind_spearman.csv')
+        all_results_df = pd.DataFrame(individual_results)
+        all_results_path = os.path.join(stats_dir, f"{dim}_threshold_ind_mahalanobis.csv")
         all_results_df.to_csv(all_results_path, index=False)
         logging.info(f"\nSaved all individual results to: {all_results_path}")
         
         # Save threshold-averaged results
         summary_df = pd.DataFrame(threshold_summaries)
-        summary_path = os.path.join(f'{stats_dir}{dim}_threshold_summary_spearman.csv')
+        dim_total = len(individual_results) #total matrices
+        dim_skipped = len([r for r in individual_results if r['skipped']]) #skipped matrices
+        dim_processed = dim_total - dim_skipped
+        summary_path = os.path.join(stats_dir, f"{dim}_threshold_summary_mahalanobis.csv")
         summary_df.to_csv(summary_path, index=False)
         logging.info(f"Saved threshold summary to: {summary_path}")
+        logging.info(f"Total matrices: {dim_total}")
+        logging.info(f"Skipped matrices: {dim_skipped}")
+        logging.info(f"Processed matrices: {dim_processed}")
+        total_dim_processed.append(dim_processed)
+        
     # Final summary
     total_time = time.time() - overall_start
     logging.info("\n" + "=" * 60)
     logging.info("All processing completed!")
     logging.info(f"Total time: {total_time / 60:.2f} minutes")
-    logging.info(f"Processed: {len(all_results)} total matrix-threshold combinations")
+    logging.info(f"Processed: {total_dim_processed} total matrix-threshold combinations")
     logging.info(f"Matrix output directory: {output_dir}")
     logging.info(f"Stats output directory: {stats_dir}")
     logging.info("=" * 60)
